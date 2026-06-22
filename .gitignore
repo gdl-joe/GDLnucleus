@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# GDL-Binärdateien & generierte Ordner (nicht diffbar)
+01_gsms/*
+05_library_xml/
+06_library_gsm/
+07_HSF/
+03_bitmaps/
+
+# Backups
+11_GSM_Backups/
+12_Backup_Last/
+13_Backup_*/
+14_XML_Backups/
+
+# Logs / Sonstiges
+16_logs/
+15_LCF/
+*.pyc
+__pycache__/
+
+# Strukturplatzhalter sichtbar halten
+!01_gsms/.gitkeep

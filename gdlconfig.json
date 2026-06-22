@@ -1,0 +1,37 @@
+{
+  "lpxmlconverter": "/Applications/Graphisoft/AC28/ArchiCAD 28.app/Contents/MacOS/LP_XMLConverter.app/Contents/MacOS/LP_XMLConverter",
+  "printtimes": false,
+  "passwords": {},
+  "gsmbackupdirectories": [
+    {
+      "directory": "{$projectpath}/11_GSM_Backups",
+      "filename": "{$filename}_{$strftime}.gsm",
+      "strftime": "%Y_%m_%d_%H_%M"
+    },
+    {
+      "directory": "{$projectpath}/13_Backup_{$strftime}",
+      "filename": "{$filename}.gsm",
+      "strftime": "%Y%m%d"
+    },
+    {
+      "directory": "{$projectpath}/12_Backup_Last",
+      "filename": "{$filename}.gsm",
+      "strftime": ""
+    }
+  ],
+  "lcf": {
+    "targetDirectory": "15_LCF",
+    "filename": "gdlnucleus.lcf"
+  },
+  "platforms": {
+    "windows": {
+      "lpxmlconverter": "C:\\Program Files\\Graphisoft\\ArchiCAD 28\\LP_XMLConverter.exe"
+    },
+    "mac": {
+      "lpxmlconverter": "/Applications/Graphisoft/AC28/ArchiCAD 28.app/Contents/MacOS/LP_XMLConverter.app/Contents/MacOS/LP_XMLConverter"
+    },
+    "linux": {
+      "lpxmlconverter": "/path/to/lp_xmlconverter"
+    }
+  }
+}

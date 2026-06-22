@@ -1,0 +1,116 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        // GSM -> HSF
+        {
+            "label": "GSM2HSF (all files)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "l2hsf", "--all", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+
+        // GSM -> XML/Source
+        {
+            "label": "GSM2XML (current file)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "g2x", "${file}", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+        {
+            "label": "GSM2XML (all files)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "g2x", "--all", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+
+        // XML/Source -> GSM
+        {
+            "label": "XML2GSM (all files)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "x2g", "--all", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+        {
+            "label": "XML2GSM (current file)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "x2g", "${file}", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+
+        // Show current file path (helper)
+        {
+            "label": "Print Current File",
+            "type": "shell",
+            "command": "echo",
+            "args": ["${file}"],
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+
+        // Build LCF container
+        {
+            "label": "createcontainer (LCF)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "g2L", "--all", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+
+        // Update embedded Picture.xml
+        {
+            "label": "Update Picture.xml (current file)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "images", "${file}", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Update Picture.xml (all files)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "images", "--all", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+
+        // Export parameters to CSV
+        {
+            "label": "Parameter-CSV (current file)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "paramcsv", "${file}", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Parameter-CSV (all files)",
+            "type": "shell",
+            "command": "python3",
+            "args": ["-u", "bin/gdlconverter.py", "paramcsv", "--all", "${workspaceRoot}"],
+            "group": "build",
+            "presentation": { "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        }
+    ]
+}
