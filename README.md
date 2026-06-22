@@ -113,16 +113,34 @@ The same commands are wrapped as VS Code tasks in `.vscode/tasks.json`.
 
 ---
 
-## VS Code extension — GDL Parameter Editor
+## VS Code extensions
 
-`extensions/gdl-parameter-editor-0.5.7.vsix` is an optional companion extension that
-gives you a visual editor for `Parameters.xml`. Install it via:
+Two companion extensions are bundled in `extensions/`. Install either via
+`code --install-extension extensions/<file>.vsix` or in VS Code:
+*Extensions → … → Install from VSIX…*
+
+### GDL Task Runner (recommended)
+
+`extensions/gdl-task-runner-1.0.5.vsix` shows the tasks from `.vscode/tasks.json`
+as a clickable **tree view** in the Explorer — run any conversion with a single click,
+automatically grouped by the comment headers in `tasks.json`. This is the most
+convenient way to drive the GDLnucleus workflow.
+
+```
+code --install-extension extensions/gdl-task-runner-1.0.5.vsix
+```
+
+After installing, open this folder as a workspace and find the **GDL Tasks** section
+in the Explorer panel.
+
+### GDL Parameter Editor
+
+`extensions/gdl-parameter-editor-0.5.7.vsix` gives you a visual editor for
+`Parameters.xml`.
 
 ```
 code --install-extension extensions/gdl-parameter-editor-0.5.7.vsix
 ```
-
-or in VS Code: *Extensions → … → Install from VSIX…*
 
 ---
 
