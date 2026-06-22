@@ -15,11 +15,22 @@ It is editor-agnostic at its core (just Python), with first-class VS Code integr
 
 ---
 
+## Why?
+
+Visual Studio Code is a superb, highly customizable editor — and Graphisoft ships a
+[GDL syntax extension](https://marketplace.visualstudio.com/items?itemName=GRAPHISOFT.gdl)
+with full highlighting, snippets and autocomplete. What is missing is a *direct link to
+ArchiCAD*. Rather than going through the API, GDLnucleus establishes an **indirect link**:
+GDL objects are transferred between ArchiCAD and VS Code through Graphisoft's
+`LP_XMLConverter`. A task system automates every conversion step at the push of a button,
+so you can switch between ArchiCAD and VS Code at any time without losses and edit GDL
+**in parallel** in both.
+
 ## Requirements
 
 - **Python 3.x** — <https://www.python.org/downloads/>
 - **ArchiCAD** with `LP_XMLConverter` (ships inside the ArchiCAD installation)
-- **VS Code** (optional, for the one-click tasks)
+- **VS Code** + the official [Graphisoft GDL extension](https://marketplace.visualstudio.com/items?itemName=GRAPHISOFT.gdl) (syntax highlighting, snippets, autocomplete)
 
 ---
 
@@ -113,6 +124,47 @@ The same commands are wrapped as VS Code tasks in `.vscode/tasks.json`.
 
 ---
 
+## Typical workflow (round-trip)
+
+1. **In ArchiCAD:** create your GSM(s) (each with its own GUID, parameters, scripts) and
+   save them into `01_gsms/<YourLibrary>/` (macros go into the `Makros/` sub-folder).
+   *Always save in ArchiCAD first — unsaved GSMs are not covered by the backup.*
+2. **Decompile:** run **GSM2XML** (`g2x`). Every object appears in `02_source/<Object>/`
+   with its individual scripts and parameter list; the previous XML is backed up.
+3. **Edit** the `.gdl` scripts in VS Code. Transferring parameters between objects is much
+   faster directly in `Parameters.xml`.
+4. **Compile back:** run **XML2GSM** (`x2g`). The scripts are reassembled into one XML and
+   converted to a GSM; the old GSM is backed up with a timestamp.
+5. **In ArchiCAD:** hit *Reload Libraries* — your VS Code changes are live.
+
+Switching back to VS Code after further ArchiCAD edits? Save the GSM in ArchiCAD, then run
+**GSM2XML** again. You can keep bouncing between both tools indefinitely.
+
+### Auto-convert on save (optional)
+
+Install the third-party extension **Trigger Task on Save** and add this to your
+`settings.json` to run `XML2GSM` automatically whenever you save a `.gdl` file:
+
+```json
+"triggerTaskOnSave.tasks": {
+  "XML2GSM (all files)": ["02_source/**/*.gdl"]
+}
+```
+
+### Embedding graphics
+
+1. Add a preview image to the GSM in ArchiCAD, then run **GSM2XML**.
+2. The preview lands in a sub-folder of `03_bitmaps/`. Put any further images that belong
+   to the object into the same folder.
+3. Run **Update Picture.xml** (`images`) — the bitmaps are written into `GDLPict.xml`.
+4. The next **XML2GSM** embeds them into the GSM.
+
+### Parameter list as CSV
+
+Run **Parameter-CSV** (`paramcsv`); the output is written to the documentation folder.
+
+---
+
 ## VS Code extensions
 
 Two companion extensions are bundled in `extensions/`. Install either via
@@ -141,6 +193,11 @@ in the Explorer panel.
 ```
 code --install-extension extensions/gdl-parameter-editor-0.5.7.vsix
 ```
+
+### Also recommended (from the VS Code Marketplace)
+
+- **[Graphisoft GDL](https://marketplace.visualstudio.com/items?itemName=GRAPHISOFT.gdl)** — official GDL syntax highlighting, snippets and autocomplete (essential).
+- **Trigger Task on Save** — run `XML2GSM` automatically on save (see *Auto-convert on save* above).
 
 ---
 
