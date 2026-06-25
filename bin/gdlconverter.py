@@ -714,10 +714,13 @@ def gsm2hsf(gsmfile):
             pjoin(C['projectpath'], FOLDER_GSM_WORK, filename),
             pjoin(C['projectpath'], FOLDER_HSF, filename))
     
-    # Quellcodedateien extrahieren
-    if not os.path.exists(sourcefolder):
-        os.makedirs(sourcefolder)
-    write_source(xmlfilename, sourcefolder)
+    # Quellcodedateien extrahieren — nur wenn eine XML vorliegt (z. B. nach
+    # vorherigem g2x). GSM2HSF funktioniert auch ohne: l2hsf erzeugt die
+    # HSF-Dateien direkt. Bestehendes Verhalten (XML vorhanden) bleibt gleich.
+    if os.path.exists(xmlfilename):
+        if not os.path.exists(sourcefolder):
+            os.makedirs(sourcefolder)
+        write_source(xmlfilename, sourcefolder)
     git_commit_source(C['projectpath'], 'l2hsf', filename)
 
 
