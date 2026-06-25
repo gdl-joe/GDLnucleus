@@ -24,3 +24,7 @@ __pycache__/
 
 # Strukturplatzhalter sichtbar halten
 !01_gsms/.gitkeep
+
+# Demo-Objekt mitliefern, damit GSM2HSF/HSF2GSM out-of-the-box testbar sind
+!01_gsms/Schematic3DModel/
+!01_gsms/Schematic3DModel/Schematic3DModel.gsm
