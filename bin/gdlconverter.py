@@ -8,6 +8,7 @@ import datetime
 import os
 import shutil
 import glob
+import re
 import codecs
 import sys
 import xml.etree.ElementTree as ET
@@ -548,6 +549,165 @@ def lpxmlconverter(mode, filename, *args):
         if logger:
             logger.debug(f'Execute time: {time_str}')
     return exitcode
+
+
+CHECK_MSG_RE = re.compile(
+    r':\s*(error|warning|fehler|warnung)\s*:\s*'
+    r'(?:\((?:in|inside)\s+(Script_[0-9A-Za-z]+)\)\s*:\s*)?(.*)',
+    re.IGNORECASE)
+# Zeilenangabe:  "> at line 3 in the 3D script ..."  /  "> bei Zeile 3 ..."
+CHECK_LINE_RE = re.compile(r'(?:bei\s+Zeile|at\s+line)\s+(\d+)', re.IGNORECASE)
+
+
+def parse_check_log(log):
+    """Extrahiert Befunde aus der convertlibrary-Ausgabe.
+
+    Liefert Liste von dicts {type, script, line, message}. script/line koennen
+    None sein (z.B. 'Missing ancestor', 'unused parameters').
+    """
+    findings = []
+    pending = None
+    for raw in log.split('\n'):
+        m = CHECK_MSG_RE.search(raw)
+        if m:
+            if pending:
+                findings.append(pending)
+            typ = m.group(1).lower()
+            typ = {'fehler': 'error', 'warnung': 'warning'}.get(typ, typ)
+            pending = {'type': typ, 'script': m.group(2),
+                       'message': m.group(3).strip(), 'line': None}
+            continue
+        lm = CHECK_LINE_RE.search(raw)
+        if lm and pending and pending['line'] is None:
+            pending['line'] = int(lm.group(1))
+            findings.append(pending)
+            pending = None
+    if pending:
+        findings.append(pending)
+    # Duplikate entfernen (checkall meldet Skript-Fehler oft doppelt:
+    # einmal beim XML-Parsen, einmal beim Kompilieren)
+    seen = set()
+    unique = []
+    for f in findings:
+        key = (f['type'], f['script'], f['line'], f['message'])
+        if key not in seen:
+            seen.add(key)
+            unique.append(f)
+    return unique
+
+
+def check_one(filename, projectpath, converter_path):
+    """Prueft ein einzelnes Objekt. Liefert (findings, status: 'checked'|'skipped', detail)."""
+    xmlfilename = pjoin(projectpath, FOLDER_XML_LIBRARY, filename, filename + '.xml')
+    sourcefolder = pjoin(projectpath, FOLDER_SOURCE, filename)
+    if not os.path.isdir(sourcefolder):
+        return ([], 'skipped', f'kein {FOLDER_SOURCE}-Ordner')
+    if not os.path.isfile(xmlfilename):
+        return ([], 'skipped', f'keine XML-Vorlage in {FOLDER_XML_LIBRARY} (erst g2x ausfuehren)')
+
+    # aktuelle libpart-XML aus 02_source bauen (wie x2g)
+    newxml = replace_with_source(xmlfilename, sourcefolder)
+    # Bild-Sektionen (Picture/GDLPict) fuer den Check entfernen: sie verweisen
+    # per path= auf externe Bilddateien, die im isolierten Pruef-Ordner fehlen
+    # und den Compiler sonst VOR der Skript-Pruefung abbrechen lassen
+    # ("Invalid Image File"). Fuer die Syntaxpruefung sind Bilder irrelevant.
+    newxml = re.sub(r'<(?:Picture|GDLPict)\b[^>]*/>', '', newxml)
+    newxml = re.sub(r'<(?:Picture|GDLPict)\b.*?</(?:Picture|GDLPict)>', '',
+                    newxml, flags=re.DOTALL)
+
+    base = pjoin(projectpath, FOLDER_GSM_WORK, '_check_tmp')
+    src = pjoin(base, 'src')
+    dst = pjoin(base, 'dst')
+    if os.path.exists(base):
+        shutil.rmtree(base)
+    os.makedirs(src)
+    os.makedirs(dst)
+    try:
+        with open(pjoin(src, filename + '.xml'), 'w', encoding='utf-8') as f:
+            f.write(newxml)
+        proc = run([converter_path, 'convertlibrary', '-checkall', src, dst],
+                   capture_output=True, text=True)
+        log = (proc.stdout or '') + (proc.stderr or '')
+    finally:
+        shutil.rmtree(base, ignore_errors=True)
+
+    log = log.replace(src + os.sep, '').replace(dst + os.sep, '')
+    return (parse_check_log(log), 'checked', '')
+
+
+def _print_check_json(payload):
+    """Gibt das Report-JSON zwischen eindeutigen Markern aus, damit die Extension
+    es trotz Logging-Zeilen auf stdout robust extrahieren kann."""
+    print("###GDLJSON_START###")
+    print(json.dumps(payload, ensure_ascii=False))
+    print("###GDLJSON_END###")
+
+
+def check_command(foldername, projectpath, as_json=False):
+    """check-Modus: prueft ein Objekt (oder --all) mit dem Archicad-Compiler.
+    as_json=True -> JSON zwischen Markern statt Text. Exit: 0 ok, 2 Fehler, 1 Setup."""
+    converter_path = get_lpxmlconverter_path()
+    if not converter_path:
+        if as_json:
+            _print_check_json({"objects": [], "summary": {"objects": 0, "script_errors": 0},
+                               "error": "lpxmlconverter path not found"})
+        else:
+            print('Error: lpxmlconverter path not found. Please check gdlconfig.json')
+        return 1
+
+    source_root = pjoin(projectpath, FOLDER_SOURCE)
+    if foldername == '--all':
+        if not os.path.isdir(source_root):
+            if as_json:
+                _print_check_json({"objects": [], "summary": {"objects": 0, "script_errors": 0},
+                                   "error": f"{FOLDER_SOURCE} nicht gefunden"})
+            else:
+                print(f'Error: {FOLDER_SOURCE} nicht gefunden')
+            return 1
+        objects = sorted(d for d in os.listdir(source_root)
+                         if os.path.isdir(pjoin(source_root, d)) and not d.startswith('.'))
+    elif os.path.isfile(foldername):
+        objects = [os.path.basename(os.path.dirname(foldername))]
+    else:
+        objects = [os.path.basename(os.path.normpath(foldername))]
+
+    results = []
+    total_script_err = 0
+    for name in objects:
+        findings, status, detail = check_one(name, projectpath, converter_path)
+        script_f = [f for f in findings if f['script']]
+        context_f = [f for f in findings if not f['script']]
+        script_err = [f for f in script_f if f['type'] == 'error']
+        total_script_err += len(script_err)
+        results.append({"name": name, "status": status, "detail": detail,
+                        "script_findings": script_f, "context_findings": context_f})
+        if as_json:
+            continue
+        if status == 'skipped':
+            print(f'  [{name}] {detail} - uebersprungen')
+            continue
+        if not findings:
+            print(f'  [{name}] OK')
+            continue
+        if script_f:
+            print(f'  [{name}] {len(script_err)} Skript-Fehler:')
+            for f in script_f:
+                loc = f'{f["script"]}, Zeile {f["line"]}' if f['line'] else f['script']
+                tag = 'FEHLER ' if f['type'] == 'error' else 'Warnung'
+                print(f'      {tag} ({loc}): {f["message"]}')
+        else:
+            print(f'  [{name}] keine Skript-Fehler')
+        if context_f:
+            print(f'      -- Kontext-Hinweise (im Einzel-Check oft Ancestry/Makro fehlend):')
+            for f in context_f:
+                print(f'         {f["type"]}: {f["message"]}')
+
+    if as_json:
+        _print_check_json({"objects": results,
+                           "summary": {"objects": len(objects), "script_errors": total_script_err}})
+    else:
+        print(f'\nGesamt: {total_script_err} Skript-Fehler in {len(objects)} Objekt(en).')
+    return 2 if total_script_err > 0 else 0
 
 
 def lcflpxmlconverter(mode, ziel, quelle):
@@ -1267,6 +1427,11 @@ if __name__=='__main__':
         sys.exit(1)
         
     C['projectpath'] = projectpath
+
+    # GDL-Syntaxpruefung: braucht 02_source + XML-Vorlage, KEIN 01_gsms.
+    # Daher vor detect_library_name (das ohne 01_gsms-Library abbricht).
+    if mode == 'check':
+        sys.exit(check_command(foldername, projectpath, as_json='--json' in sys.argv))
     
     # Bibliotheksname automatisch aus dem ersten Ordnernamen unter 01_gsms/ ermitteln
     detected_name = detect_library_name(projectpath)
@@ -1332,14 +1497,22 @@ if __name__=='__main__':
         print("Starting SVG to TIFF conversion")
         exitcode = convert_svg_to_tiff()
         sys.exit(exitcode)    
-    # Alle GSM-Dateien in den konfigurierten Ordnern verarbeiten
+    # Alle GSM-Dateien in den konfigurierten Ordnern verarbeiten.
+    # Rekursiv: .gsm in beliebiger Tiefe unter den Library-Ordnern finden.
+    # Nur *.gsm wird erfasst, Nicht-GSM-Dateien (Grafiken etc.) bleiben aussen vor.
+    seen_gsms = set()
     for folder in FOLDERS_GSMS:
         folder_path = pjoin(projectpath, folder)
         if not os.path.exists(folder_path):
             continue
             
-        gsmfiles = glob.glob(pjoin(folder_path, '*.gsm'))
+        gsmfiles = glob.glob(pjoin(folder_path, '**', '*.gsm'), recursive=True)
         for gsmfile in gsmfiles:
+            # Ueberlappende Library-/Makros-Pfade nicht doppelt verarbeiten
+            gsm_key = os.path.normpath(gsmfile)
+            if gsm_key in seen_gsms:
+                continue
+            seen_gsms.add(gsm_key)
             filename = os.path.splitext(os.path.basename(gsmfile))[0]
             if os.path.isfile(gsmfile):
                 # foldername kann sein: "--all", Objektname, voller Pfad zu .gdl/.gsm, oder Verzeichnispfad

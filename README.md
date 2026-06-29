@@ -8,6 +8,7 @@ workflow. A single Python script wraps Graphisoft's `LP_XMLConverter` and gives 
 - **Decompile** `.gsm` → editable GDL scripts + `Parameters.xml` (one folder per object)
 - **Compile** editable source → `.gsm` again
 - **HSF / LCF** export, embedded picture updates, parameter CSV export
+- **Syntax-check** objects with the real ArchiCAD compiler — script errors as VS Code diagnostics
 - Automatic multi-level **backups**, **logging**, and optional **Git auto-commit** of your source
 - Ready-to-use **VS Code tasks** for every step
 
@@ -193,6 +194,24 @@ in the Explorer panel.
 ```
 code --install-extension extensions/gdl-parameter-editor-0.5.7.vsix
 ```
+
+### GDL Syntax-Check
+
+`extensions/gdl-syntax-check-0.1.0.vsix` runs the **real ArchiCAD GDL compiler**
+on your objects and reports script errors as native VS Code **diagnostics**
+(squiggle + Problems panel, click jumps to the line). It drives the bundled
+converter's `check` mode under the hood — no API needed.
+
+```
+code --install-extension extensions/gdl-syntax-check-0.1.0.vsix
+```
+
+Trigger it from the **editor title button**, the **right-click menu**, or the
+Command Palette (*GDL: Syntax-Check (current object / whole project)*) on any
+`.gdl` file in `02_source/<Object>/`. Real script errors appear as diagnostics;
+context hints (missing ancestry/macros from the isolated single-object check)
+go to the *GDL Syntax-Check* output channel. Requires a built XML template
+(`05_library_xml`, via `g2x`).
 
 ### Also recommended (from the VS Code Marketplace)
 
